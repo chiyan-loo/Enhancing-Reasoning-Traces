@@ -93,7 +93,7 @@ def parse_args():
     parser.add_argument(
         "--max_seq_length", 
         type=int, 
-        default=2048, 
+        default=16384, 
         help="Maximum sequence length"
     )
 
@@ -175,9 +175,17 @@ def parse_args():
     # Auto-set bf16/fp16 based on hardware
     if torch.cuda.is_available():
         if torch.cuda.is_bf16_supported():
+            print("Using bf16 precision.")
             training_args.bf16 = True
+            training_args.fp16 = False
         else:
+            print("Using fp16 precision.")
             training_args.fp16 = True
+            training_args.bf16 = False
+    else:
+        print("Using CPU/Default precision.")
+        training_args.bf16 = False
+        training_args.fp16 = False
     
     return args, training_args
 
@@ -231,10 +239,6 @@ def main(args, training_args):
     print(f"Loading dataset from {args.dataset_name_or_path}...")
     dataset = load_dataset(args.dataset_name_or_path, split=args.dataset_split)
 
-    print(f"Filtering dataset for level 5...")
-    dataset = dataset.filter(lambda x: str(x["level"]) == 5)
-    print(f"Filtered dataset size: {len(dataset)}")
-
 
     print(f"Shuffling dataset with seed {args.shuffle_seed}...")
     dataset = dataset.shuffle(seed=args.shuffle_seed)
@@ -285,7 +289,10 @@ def main(args, training_args):
         dataset = dataset.map(format_example, desc="Formatting dataset")
         
         print("\n--- Example Processed Training Sample ---")
-        print(dataset[0][args.text_column])
+        if len(dataset) > 0:
+            print(dataset[0][args.text_column])
+        else:
+            print("No samples available to print.")
         print("------------------------------------------\n")
     
     # 6. Initialize SFTTrainer from trl
