@@ -231,6 +231,11 @@ def main(args, training_args):
     print(f"Loading dataset from {args.dataset_name_or_path}...")
     dataset = load_dataset(args.dataset_name_or_path, split=args.dataset_split)
 
+    print(f"Filtering dataset for level 5...")
+    dataset = dataset.filter(lambda x: str(x["level"]) == 5)
+    print(f"Filtered dataset size: {len(dataset)}")
+
+
     print(f"Shuffling dataset with seed {args.shuffle_seed}...")
     dataset = dataset.shuffle(seed=args.shuffle_seed)
     

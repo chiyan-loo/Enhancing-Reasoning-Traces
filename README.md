@@ -42,8 +42,8 @@ python train/lora.py \
     --dataset_name_or_path "nlile/hendrycks-MATH-benchmark" \
     --output_dir "./output/Qwen2.5-3b-Instruct-MATH" \
     --load_in_4bit \
-    --max_train_samples 600 \
-    --per_device_train_batch_size 1 \
+    --max_train_samples 2000 \
+    --per_device_train_batch_size 4 \
     --gradient_accumulation_steps 4 \
     --system_prompt "Reason step by step, and put your final answer within \\boxed{}."
 ```
