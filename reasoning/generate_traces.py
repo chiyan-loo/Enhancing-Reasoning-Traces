@@ -68,6 +68,7 @@ def main():
 
     print(f"Loading dataset: {args.dataset} (split: {args.split})")
     ds = load_dataset(args.dataset, split=args.split)
+    ds = ds.shuffle(seed=args.seed)
     if args.num_samples > 0:
         ds = ds.select(range(min(args.num_samples, len(ds))))
 
@@ -123,7 +124,7 @@ def main():
             
             # Check if we are approaching max_model_len
             current_tokens = len(outputs[j].prompt_token_ids) + len(outputs[j].outputs[0].token_ids)
-            if current_tokens > args.max_model_len - 300:
+            if current_tokens > args.max_model_len - 200:
                 print(f"Sample {idx} reached length limit ({current_tokens} tokens). Stopping.")
                 should_stop = True
 
@@ -154,9 +155,15 @@ def main():
     # Final result collection
     mode_correct = 0
     saved_count = 0
+    total_tokens_all = 0
+    total_tokens_correct = 0
+    
     for i, example in enumerate(ds):
         if final_responses[i] is None:
             final_responses[i] = prompts[i] # Should not happen usually
+
+        response_tokens = len(tok.encode(final_responses[i]))
+        total_tokens_all += response_tokens
 
         problem = example[args.question_key]
         ground_truth = str(example[args.answer_key]).strip()
@@ -164,6 +171,7 @@ def main():
         
         if is_correct:
             mode_correct += 1
+            total_tokens_correct += response_tokens
             
         sample = {
             "index": i,
@@ -189,6 +197,9 @@ def main():
     print("="*60)
     print(f" Total Samples:    {len(ds)}")
     print(f" Total Correct:    {mode_correct} ({mode_correct/len(ds):.2%})")
+    print(f" Avg Token Len:    {total_tokens_all/len(ds) if len(ds) > 0 else 0:.2f}")
+    if mode_correct > 0:
+        print(f" Avg Correct Len:  {total_tokens_correct/mode_correct:.2f}")
     print(f" Output (All):     {samples_file}")
     print(f" Output (Correct): {correct_file}")
     print("="*60)

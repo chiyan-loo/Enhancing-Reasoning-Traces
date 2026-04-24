@@ -67,7 +67,7 @@ def parse_args():
     parser.add_argument(
         "--system_prompt", 
         type=str, 
-        default="Reason step by step, and put your final answer within \\boxed{}.",
+        default="You are Qwen, created by Alibaba Cloud. You are a helpful assistant.",
         help="System prompt to use during training"
     )
     

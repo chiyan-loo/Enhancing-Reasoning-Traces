@@ -13,8 +13,9 @@ def merge_lora():
     print(f"Loading base model from {args.base_model_name_or_path}...")
     base_model = AutoModelForCausalLM.from_pretrained(
         args.base_model_name_or_path,
-        torch_dtype=torch.bfloat16,
-        device_map="cpu",  # Use CPU to avoid OOM if VRAM is tight
+        dtype=torch.bfloat16,
+        device_map="cpu",
+        low_cpu_mem_usage=True,
         trust_remote_code=True
     )
     tokenizer = AutoTokenizer.from_pretrained(args.base_model_name_or_path, trust_remote_code=True)
@@ -23,10 +24,14 @@ def merge_lora():
     model = PeftModel.from_pretrained(base_model, args.adapter_path)
 
     print("Merging weights into base model...")
-    merged_model = model.merge_and_unload()
+    model = model.merge_and_unload()
 
     print(f"Saving merged model to {args.output_dir}...")
-    merged_model.save_pretrained(args.output_dir)
+    model.save_pretrained(
+        args.output_dir,
+        safe_serialization=True,
+        max_shard_size="2GB"
+    )
     tokenizer.save_pretrained(args.output_dir)
     print("Done!")
 

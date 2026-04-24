@@ -2,4 +2,8 @@
 .env
 .pycache
 output/
-results/
+# results/
+samples*
+
+# *.json
+# *.jsonl
