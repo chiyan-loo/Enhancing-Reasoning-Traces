@@ -25,10 +25,8 @@ def main():
     parser.add_argument("--max_model_len", type=int, default=4096, help="Maximum model length")
     
     # Generation config
-    parser.add_argument("--mode", type=str, default="budget", choices=["budget", "alternating"], help="Generation mode")
-    parser.add_argument("--max_steps", type=int, default=10, help="Maximum number of budget forcing steps")
-    parser.add_argument("--over_gen_prob", type=float, default=0.2, help="Probability to continue generating after correct answer is found")
-    parser.add_argument("--over_gen_exponent", type=float, default=1.0, help="Exponent for probability decay (1.0=linear, 2.0=quadratic, etc.)")
+    parser.add_argument("--mode", type=str.lower, default="budget", choices=["budget", "alternating", "none"], help="Generation mode")
+    parser.add_argument("--num_waits", type=int, default=5, help="Fixed number of 'Wait' steps to take for every sample")
     parser.add_argument("--max_tokens", type=int, default=4096, help="Max tokens per generation step")
     parser.add_argument("--temperature", type=float, default=0.0, help="Sampling temperature")
     parser.add_argument("--top_p", type=float, default=1.0, help="Top-p sampling")
@@ -97,10 +95,11 @@ def main():
     active_indices = list(range(len(ds)))
     final_responses = [None] * len(ds)
     is_correct_list = [False] * len(ds)
+    is_truncated_list = [False] * len(ds)
     steps_taken = [0] * len(ds)
 
     # Iterative Generation Loop
-    for step in range(args.max_steps + 1):
+    for step in range(args.num_waits + 1):
         if not active_indices:
             break
             
@@ -122,21 +121,19 @@ def main():
             # Decide whether to stop
             should_stop = False
             
-            # Check if we are approaching max_model_len
+            # Check for truncation or length limit
             current_tokens = len(outputs[j].prompt_token_ids) + len(outputs[j].outputs[0].token_ids)
-            if current_tokens > args.max_model_len - 200:
+            finish_reason = outputs[j].outputs[0].finish_reason
+            
+            if finish_reason == "length" or current_tokens >= args.max_model_len:
+                print(f"Sample {idx} truncated at ({current_tokens} tokens). Stopping and not saving to correct file.")
+                is_truncated_list[idx] = True
+                should_stop = True
+            elif current_tokens > args.max_model_len - 400:
                 print(f"Sample {idx} reached length limit ({current_tokens} tokens). Stopping.")
                 should_stop = True
 
-            if not should_stop and is_correct:
-                # Calculate decaying over-generation probability
-                # More likely to continue earlier in steps
-                decay = (1.0 - step / args.max_steps) ** args.over_gen_exponent
-                current_over_gen_prob = args.over_gen_prob * decay
-                if random.random() > current_over_gen_prob:
-                    should_stop = True
-            
-            if step == args.max_steps:
+            if not should_stop and (step == args.num_waits or args.mode == "none"):
                 should_stop = True
                 
             if should_stop:
@@ -179,6 +176,7 @@ def main():
             "ground_truth": ground_truth,
             "model_response": final_responses[i],
             "is_correct": bool(is_correct),
+            "truncated": bool(is_truncated_list[i]),
             "steps": steps_taken[i]
         }
         
@@ -186,8 +184,8 @@ def main():
         with open(samples_file, "a") as f:
             f.write(json.dumps(sample) + "\n")
         
-        # Also save to correct-only file
-        if is_correct:
+        # Also save to correct-only file (exclude truncated)
+        if is_correct and not is_truncated_list[i]:
             with open(correct_file, "a") as f:
                 f.write(json.dumps(sample) + "\n")
             saved_count += 1
