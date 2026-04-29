@@ -9,7 +9,7 @@
 
 **Method**: To self-generate high-quality reasoning traces, we adopt a simple budget forcing method where we append “wait” and “alternatively” to the response to encourage longer reasoning and instill self-verification during synthetic data generation. We then take the correctly generated responses, filter out repetitive responses, and fine tune on the filtered dataset. We use 0.7 temperature for diversity during reasoning trace generation and greedy decoding during evaluation.
 
-**Results**: Preliminary results show that fine tuning Qwen 2.5 3B Instruct with QLoRA on less than 250 self-generated MATH reasoning traces (3 budget forcing steps) yields a 3.8% accuracy gain on MATH-500 while typical self-taught reasoning only increases accuracy by 0.8% with the same amount of samples.
+**Results**: Preliminary results show that fine tuning Qwen 2.5 3B Instruct with QLoRA on less than 250 self-generated MATH reasoning traces (3 budget forcing steps) yields a 3.8% accuracy gain on MATH-500 while typical self-taught reasoning only increases accuracy by 0.8% with the same amount of samples. (both evaluated with 1 training iteration)
 
 ## Current Issues
 
